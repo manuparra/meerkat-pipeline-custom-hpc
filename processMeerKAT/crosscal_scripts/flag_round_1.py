@@ -4,9 +4,18 @@
 import sys
 import os
 
+# Adapt PYTHONPATH to include processMeerKAT
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 import config_parser
 from config_parser import validate_args as va
 import bookkeeping
+
+from casatasks import *
+logfile=casalog.logfile()
+casalog.setlogfile('logs/{SLURM_JOB_NAME}-{SLURM_JOB_ID}.casa'.format(**os.environ))
+import casampi
 
 def do_pre_flag(visname, fields, badfreqranges, badants):
 
@@ -70,4 +79,4 @@ def main(args,taskvals):
 
 if __name__ == '__main__':
 
-    bookkeeping.run_script(main)
+    bookkeeping.run_script(main,logfile)

@@ -4,10 +4,21 @@
 import sys
 import os
 
+# Adapt PYTHONPATH to include processMeerKAT
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 import config_parser
 from config_parser import validate_args as va
 import bookkeeping
 import glob
+
+from casatasks import *
+logfile=casalog.logfile()
+casalog.setlogfile('logs/{SLURM_JOB_NAME}-{SLURM_JOB_ID}.casa'.format(**os.environ))
+from casatools import msmetadata
+import casampi
+msmd = msmetadata()
 
 def run_tclean(visname, fields, keepmms):
     """
@@ -41,8 +52,9 @@ def run_tclean(visname, fields, keepmms):
 
     #Store target names
     targimname = []
-    for tt in fields.targetfield.split(','):
-        fname = msmd.namesforfields(int(tt))[0]
+    for fname in fields.targetfield.split(','):
+        if fname.isdigit():
+            fname = msmd.namesforfields(int(fname))[0]
         tmpname = os.path.splitext(os.path.split(visname)[1])[0] + '_%s.im' % (fname)
         targimname.append(os.path.join(impath, tmpname))
 
@@ -53,7 +65,10 @@ def run_tclean(visname, fields, keepmms):
         else:
             field = fields.targetfield
 
-        fname = msmd.namesforfields(int(field))[0]
+        if field.isdigit():
+            fname = msmd.namesforfields(int(field))[0]
+        else:
+            fname = field
         inname = '%s.%s.%s' % (os.path.splitext(os.path.split(visname)[1])[0], fname, extn)
 
         if len(glob.glob(tt + '*')) == 0:
@@ -68,9 +83,10 @@ def run_tclean(visname, fields, keepmms):
 
 
     #Image all calibrator (and extra) fields and export to fits
-    for subf in fields.gainfields.split(',') + fields.extrafields.split(','):
-        if subf != '':
-            fname = msmd.namesforfields(int(subf))[0]
+    for fname in fields.gainfields.split(',') + fields.extrafields.split(','):
+        if fname != '':
+            if fname.isdigit():
+                fname = msmd.namesforfields(int(fname))[0]
 
             secimname = os.path.splitext(os.path.split(visname)[1])[0]
             inname = '%s.%s.%s' % (secimname, fname, extn)
@@ -99,4 +115,4 @@ def main(args,taskvals):
 
 if __name__ == '__main__':
 
-    bookkeeping.run_script(main)
+    bookkeeping.run_script(main,logfile)

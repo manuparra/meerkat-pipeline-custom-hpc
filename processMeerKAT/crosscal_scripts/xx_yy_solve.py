@@ -5,9 +5,17 @@ import sys
 import os
 import shutil
 
+# Adapt PYTHONPATH to include processMeerKAT
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 import config_parser
 import bookkeeping
 from config_parser import validate_args as va
+
+from casatasks import *
+logfile=casalog.logfile()
+casalog.setlogfile('logs/{SLURM_JOB_NAME}-{SLURM_JOB_ID}.casa'.format(**os.environ))
 
 import logging
 from time import gmtime
@@ -51,7 +59,7 @@ def do_parallel_cal(visname, fields, calfiles, referenceant, caldir,
     bookkeeping.check_file(calfiles.gainfile)
 
     # Only run fluxscale if bootstrapping
-    if len(fields.gainfields) > 1:
+    if len(fields.gainfields.split(',')) > 1:
         fluxscale(vis=visname, caltable=calfiles.gainfile,
                 reference=[fields.fluxfield], transfer='',
                 fluxtable=calfiles.fluxfile, append=False, display=False,
@@ -73,4 +81,4 @@ def main(args,taskvals):
 
 if __name__ == '__main__':
 
-    bookkeeping.run_script(main)
+    bookkeeping.run_script(main,logfile)
