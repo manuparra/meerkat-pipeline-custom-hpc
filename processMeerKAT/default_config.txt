@@ -15,7 +15,7 @@ plane = 1
 mem = 232                         # Use this many GB of memory (per node)
 partition = 'Main'                # SLURM partition to use
 exclude = ''                      # SLURM nodes to exclude
-time = '12:00:00'
+time = '1-00:00:00'
 submit = False
 container = '/idia/software/containers/casa-6-2021-10-12.simg'
 mpi_wrapper = 'mpirun'
@@ -42,7 +42,7 @@ scripts = [ ('validate_input.py',False,''),
 [crosscal]
 minbaselines = 4                  # Minimum number of baselines to use while calibrating
 chanbin = 1                       # Number of channels to average before calibration (during partition)
-width = 1                         # Number of channels to (further) average after calibration (during split)
+width = 2                   	# Number of channels to (further) average after calibration (during split)
 timeavg = '8s'                    # Time interval to average after calibration (during split)
 createmms = True                  # Create MMS (True) or MS (False) for cross-calibration during partition
 keepmms = True                    # Output MMS (True) or MS (False) during split

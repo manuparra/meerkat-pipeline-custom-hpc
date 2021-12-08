@@ -157,12 +157,13 @@ def parse_args():
     parser.add_argument("-C","--config",metavar="path", default=HPC_DEFAULTS['CONFIG'.lower()], required=False, type=str, help="Relative (not absolute) path to config file.")
 
     # Extract hpc name used during build and warn if not the same as CLI hpc
+    args, unknown = parser.parse_known_args()
     config_dict, config = config_parser.parse_config(args.config)
     if config.has_option('run', 'hpc'):
         config_hpc_name = config['run']['hpc']
     else:
         config_hpc_name = HPC_NAME
-    if HPC_NAME != config_hpc_name:
+    if str(HPC_NAME.strip("'")) != str(config_hpc_name.strip("'")):
         msg = "Entered hpc ({HPC_NAME}) is not the same as was used to build this pipeline instance! '{config_hpc_name}' was used. Pipeline may not function as expected. Please consider rebuilding pipeline with correct hpc selection."
         logger.warning(msg.format(HPC_NAME=HPC_NAME, config_hpc_name=config_hpc_name))
 
@@ -389,29 +390,26 @@ def write_command(script,args,mpi_wrapper,container,name='job',casa_script=False
     else:
         params['casa_call'] = 'python'
 
-    if arrayJob:
-        # Maintain argument calls for individual SPW runs ### Adapted from `write_spw_master` function.
-        argv = sys.argv[1:]
-        for idx, element in enumerate(argv):
-            # Extend name to include SPW array job is operating on:
-            if element in ["-n", "--name"]:
-                if idx+1 < len(argv):
-                    argv[idx+1] += "_${SLURM_ARRAY_JOB_ID}"
-            # Remove config name. Config is passed into `args` parameter.
-            elif element in ["-c", "--config"]:
-                argv[idx] = ""
-                if idx+1 < len(argv):
-                    argv[idx+1] = ""
-            else:
-                pass
-        params['argument_calls'] = " "+" ".join(argv)
-        # Iterate over individual SPW folders
-        command += """#Iterate over SPWs in job array, launching one after the other
-        SPWs="%s"
-        arr=($SPWs)
-        cd ${arr[SLURM_ARRAY_TASK_ID]}
+    # Maintain initial CLIs
+    argv = sys.argv[1:]
+    # Maintain argument calls for individual SPW runs ### Adapted from `write_spw_master` function.
+    for idx, element in enumerate(argv):
+        # Extend name to include SPW array job is operating on:
+        if arrayJob:
+            command += """#Iterate over SPWs in job array, launching one after the other
+            SPWs="%s"
+            arr=($SPWs)
+            cd ${arr[SLURM_ARRAY_TASK_ID]}
+            """ % SPWs.replace(',',' ').replace('0:','')
 
-        """ % SPWs.replace(',',' ').replace('0:','')
+            if (element in ["-n", "--name"]) and (idx+1 < len(argv)):
+                argv[idx+1] += "_${SLURM_ARRAY_JOB_ID}"
+        # Remove config name. Config is passed using params['args'] parameter in the command composition below.
+        if element in ["-C", "--config"]:
+            argv[idx] = ""
+            if idx+1 < len(argv):
+                argv[idx+1] = ""
+        params['argument_calls'] = " "+" ".join(argv)
 
     command += "{mpi_wrapper} singularity exec {path_binding}{container} {plot_call} {casa_call} {script} {args}{argument_calls}".format(**params)
 
@@ -435,6 +433,8 @@ def write_sbatch(script,args,mem,mpi_wrapper,contents,nodes=1,tasks=16,name="job
         The memory in GB (per node) to use for this job.
     mpi_wrapper : str
         MPI wrapper for this job. e.g. 'srun', 'mpirun', 'mpicasa' (may need to specify path).
+    contents : str
+        Formatable base string e.g. 'submission_file_base' in known_hpc.cfg
     time : str, optional
         Time limit on this job.
     nodes : int, optional
@@ -629,10 +629,10 @@ def write_spw_master(filename,config,args,SPWs,precal_scripts,postcal_scripts,su
             if idx+1 < len(argv):
                 argv[idx+1] += "_${SLURM_ARRAY_JOB_ID}"
         # Remove config name. Config is passed into `args` parameter.
-        elif element in ["-c", "--config"]:
-            argv[idx] = ""
-            if idx+1 < len(argv):
-                argv[idx+1] = ""
+        #elif element in ["-C", "--config"]:
+        #    argv[idx] = ""
+        #     if idx+1 < len(argv):
+        #        argv[idx+1] = ""
         else:
             pass
     argument_calls = " ".join(argv)
@@ -642,7 +642,9 @@ def write_spw_master(filename,config,args,SPWs,precal_scripts,postcal_scripts,su
     for i,spw in enumerate(SPWs.split(',')):
         master.write('echo Running pipeline in directory "{0}" for spectral window 0:{0}\n'.format(spw))
         master.write('cd {0}\n'.format(spw))
-        master.write('output=$({0} --config ./{config} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
+        logger.info(f"Writting pipeline to run in {spw} using config {config}")
+        #master.write('output=$({0} --config ./{config} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
+        master.write('output=$({0} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
         if partition:
             master.write(' --dependencies=$partitionID\_{0}'.format(i))
         elif len(precal_scripts) > 0:
@@ -722,21 +724,20 @@ def write_spw_master(filename,config,args,SPWs,precal_scripts,postcal_scripts,su
     #[-R --run] pipeline in each SPW directory to create sbatch files that can be edited
     SPW_run_file='out.tmp'
     # Copy argument call parameters made on processMeerKAT.py for this run with minor adjustments
-    arguments = sys.argv[1:]
-    for idx, element in enumerate(arguments):
-        if element in ["-n", "--name"]:
-            print(element, arguments[idx:])
-            if idx+1 < len(arguments):
-                arguments[idx+1] += "_$f"
-        elif element in ["-c", "--config"]:
-            if idx+1 < len(arguments):
-                arguments[idx+1] = ".config.tmp"
-        else:
-            pass
+    #arguments = sys.argv[1:]
+    #for idx, element in enumerate(arguments):
+    #     if element.lower() in ["-n", "--name"]:
+    #        arguments[idx+1] += "_$f"
+    #        if idx+1 < len(arguments):
+    #    elif element.lower() in ["-c", "--config"]:
+    #        if idx+1 < len(arguments):
+    #            arguments[idx+1] = config
+    #    else:
+    #        pass
 
-    argument_calls = " ".join(arguments)
-    if ("-v" or "--verbose") not in argument_calls:
-        argument_calls += " --quiet"
+    #argument_calls = " ".join(arguments)
+    #if ("-v" or "--verbose") not in argument_calls:
+    #    argument_calls += " --quiet"
 
     # Create script to start processMeerKAT.py for each SPW whilst maintaining args.
     SPW_run_file='out.tmp'
@@ -1262,23 +1263,23 @@ def format_args(config,submit,quiet,dependencies,justrun):
 
     #Check selfcal params
     if config_parser.has_section(config,'selfcal'):
-        selfcal_kwargs = get_config_kwargs(config, 'selfcal', SELFCAL_CONFIG_KEYS)
+        selfcal_kwargs = get_config_kwargs(config, 'selfcal', HPC_DEFAULTS['SELFCAL_CONFIG_KEYS'.lower()])
         params = bookkeeping.get_selfcal_params()
         if selfcal_kwargs['loop'] > 0:
             logger.warning("Starting with loop={0}, which is only valid if previous loops were successfully run in this directory.".format(selfcal_kwargs['loop']))
         #Find RACS outliers
         elif ((nspw > 1 and 'selfcal_part1.py' in [i[0] for i in kwargs['postcal_scripts']]) or (nspw == 1 and 'selfcal_part1.py' in [i[0] for i in kwargs['scripts']])) and selfcal_kwargs['outlier_threshold'] != 0 and selfcal_kwargs['outlier_threshold'] != '':
-                logger.info('Populating sky model for selfcal using outlier_threshold={0}'.format(selfcal_kwargs['outlier_threshold']))
-                logger.info('Querying Rapid ASAKP Continuum Survey (RACS) catalog within 2 degrees of target phase centre. Please allow a moment for this.')
-                sky_model_kwargs = deepcopy(kwargs)
-                sky_model_kwargs['partition'] = 'Devel'
-                mpi_wrapper = srun(sky_model_kwargs, qos=True, time=2, mem=0)
-                command = write_command('set_sky_model.py', '-C {0}'.format(config), mpi_wrapper=mpi_wrapper, container=kwargs['container'],logfile=False)
-                logger.debug('Running following command:\n\t{0}'.format(command))
-                os.system(command)
+            logger.info('Populating sky model for selfcal using outlier_threshold={0}'.format(selfcal_kwargs['outlier_threshold']))
+            logger.info('Querying Rapid ASAKP Continuum Survey (RACS) catalog within 2 degrees of target phase centre. Please allow a moment for this.')
+            sky_model_kwargs = deepcopy(kwargs)
+            sky_model_kwargs['partition'] = 'Devel'
+            mpi_wrapper = srun(sky_model_kwargs, qos=True, time=2, mem=0)
+            command = write_command('set_sky_model.py', '-C {0}'.format(config), mpi_wrapper=mpi_wrapper, container=kwargs['container'],logfile=False)
+            logger.debug('Running following command:\n\t{0}'.format(command))
+            os.system(command)
 
     if config_parser.has_section(config,'image'):
-        imaging_kwargs = get_config_kwargs(config, 'image', IMAGING_CONFIG_KEYS)
+        imaging_kwargs = get_config_kwargs(config, 'image', HPC_DEFAULTS['IMAGING_CONFIG_KEYS'.lower()])
 
     #If nspw = 1 and precal or postcal scripts present, overwrite config and reload
     if nspw == 1:
@@ -1505,7 +1506,7 @@ def spw_split(spw,nspw,config,mem,badfreqranges,MS,partition,createmms=True,remo
     #Create each spw as directory and place config in there
     logger.info("Making {0} directories for SPWs ({1}) and copying '{2}' to each of them.".format(nspw,SPWs,config))
     for spw in SPWs:
-        spw_config = '{0}/{1}'.format(spw.replace('0:',''),config)
+        spw_config = '{0}/{1}'.format(spw.replace('0:',''), config)
         if not os.path.exists(spw.replace('0:','')):
             os.mkdir(spw.replace('0:',''))
         copyfile(config, spw_config)
@@ -1519,14 +1520,21 @@ def spw_split(spw,nspw,config,mem,badfreqranges,MS,partition,createmms=True,remo
         if MS[0] != '/':
             config_parser.overwrite_config(spw_config, conf_dict={'vis' : "'../{0}'".format(MS)}, conf_sec='data')
         if not partition:
+            ### This isnt being reached in the build or run phases. Maybe reached once submit pipeline is being run? I assumed it would have to be reached during the -R phase at the latest.
             basename, ext = os.path.splitext(MS.rstrip('/ '))
             filebase = os.path.split(basename)[1]
             extn = 'mms' if createmms else 'ms'
             vis = '{0}.{1}.{2}'.format(filebase,spw.replace('0:',''),extn)
-            logger.warning("Since script with 'partition' in its name isn't present in '{0}', assuming partition has already been done, and setting vis='{1}' in '{2}'. If '{1}' doesn't exist, please update '{2}', as the pipeline will not launch successfully.".format(config,vis,spw_config))
+            logger.warning("Since script with 'partition' in its name isn't present in '{config}', assuming partition has already been done, and setting vis='{vis}' in '{spw_config}'. If '{vis}' doesn't exist, please update '{spw_config}', as the pipeline will not launch successfully.".format(config=config,vis=vis,spw_config=spw_config))
             orig_vis = config_parser.get_key(spw_config, 'data', 'vis')
             config_parser.overwrite_config(spw_config, conf_dict={'orig_vis' : "'{0}'".format(orig_vis)}, conf_sec='run', sec_comment='# Internal variables for pipeline execution')
             config_parser.overwrite_config(spw_config, conf_dict={'vis' : "'{0}'".format(vis)}, conf_sec='data')
+        # Copy config into TMP_CONFIG to build more robust call. ### Somehow the second config used is being
+        secondary_config = f"{spw.replace('0:','')}/{HPC_DEFAULTS['TMP_CONFIG'.lower()]}"
+        logger.info(f"Copying correctly formatted config ({spw_config}) into {secondary_config}. NOTE FOR DEBUGGING.")
+        logger.info(f"partition {partition}. If not partition we update things. Else we dont.")
+        logger.info(f"{spw_config} vis: {config_parser.get_key(spw_config, 'data', 'vis')}; {secondary_config} vis {config_parser.get_key(secondary_config, 'data', 'vis')}")
+        copyfile(spw_config, "{spw}/{config_name}".format(spw=spw.replace('0:',''), config_name=HPC_DEFAULTS['TMP_CONFIG'.lower()]))
 
     return nspw
 
