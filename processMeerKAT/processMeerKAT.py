@@ -1520,14 +1520,21 @@ def spw_split(spw,nspw,config,mem,badfreqranges,MS,partition,createmms=True,remo
         if MS[0] != '/':
             config_parser.overwrite_config(spw_config, conf_dict={'vis' : "'../{0}'".format(MS)}, conf_sec='data')
         if not partition:
+            ### This isnt being reached in the build or run phases. Maybe reached once submit pipeline is being run? I assumed it would have to be reached during the -R phase at the latest.
             basename, ext = os.path.splitext(MS.rstrip('/ '))
             filebase = os.path.split(basename)[1]
             extn = 'mms' if createmms else 'ms'
             vis = '{0}.{1}.{2}'.format(filebase,spw.replace('0:',''),extn)
-            logger.warning("Since script with 'partition' in its name isn't present in '{0}', assuming partition has already been done, and setting vis='{1}' in '{2}'. If '{1}' doesn't exist, please update '{2}', as the pipeline will not launch successfully.".format(config,vis,spw_config))
+            logger.warning("Since script with 'partition' in its name isn't present in '{config}', assuming partition has already been done, and setting vis='{vis}' in '{spw_config}'. If '{vis}' doesn't exist, please update '{spw_config}', as the pipeline will not launch successfully.".format(config=config,vis=vis,spw_config=spw_config))
             orig_vis = config_parser.get_key(spw_config, 'data', 'vis')
             config_parser.overwrite_config(spw_config, conf_dict={'orig_vis' : "'{0}'".format(orig_vis)}, conf_sec='run', sec_comment='# Internal variables for pipeline execution')
             config_parser.overwrite_config(spw_config, conf_dict={'vis' : "'{0}'".format(vis)}, conf_sec='data')
+        # Copy config into TMP_CONFIG to build more robust call. ### Somehow the second config used is being
+        secondary_config = f"{spw.replace('0:','')}/{HPC_DEFAULTS['TMP_CONFIG'.lower()]}"
+        logger.info(f"Copying correctly formatted config ({spw_config}) into {secondary_config}. NOTE FOR DEBUGGING.")
+        logger.info(f"partition {partition}. If not partition we update things. Else we dont.")
+        logger.info(f"{spw_config} vis: {config_parser.get_key(spw_config, 'data', 'vis')}; {secondary_config} vis {config_parser.get_key(secondary_config, 'data', 'vis')}")
+        copyfile(spw_config, "{spw}/{config_name}".format(spw=spw.replace('0:',''), config_name=HPC_DEFAULTS['TMP_CONFIG'.lower()]))
 
     return nspw
 
