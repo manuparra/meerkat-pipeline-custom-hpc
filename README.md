@@ -37,6 +37,19 @@ Other convenient scripts are also created that allow you to monitor and (if nece
 
 For help, run `processMeerKAT.py -h`, which provides a brief description of all the command line arguments.
 
+## Selecting an HPC facility to run the pipeline on
+
+As of V2.X of the processMeerKAT pipeline, adaptations have been made to allow users to more easily run the pipeline on the SLURM based HPC facility of their choice.
+As a default, the pipeline will build and execute as if on the ilifu cluster.
+
+To build the pipeline for your own cluster you have to do two things:
+1. Add an appropriatly named section to [known_hpc.cfg](./known_hpc.cfg).
+1. Use the `--hpc` command line argument with your facilities name when building and running your pipeline, e.g. `--hpc ilifu`.
+
+Not all values within the config need to be re-written or changed for the facilities section. If you do not include an entry in your section, the value will default to that of the `DEFAULT` section.
+
+By putting in a name which does not point to a section in the [known_hpc.cfg](./known_hpc.cfg) file, the pipeline will revert to the values in the `UNKNOWN` section. This sets the upper limits of your configured HPC to extreme values, which are likely to cause the pipeline to fail, unless explicitly set using the respective the command line arguments.
+
 ## Using multiple spectral windows (new in V1.1)
 
 Starting with V1.1 of the processMeerKAT pipeline, the default behaviour is to split up the MeerKAT band into 16 spectral windows (SPWs), and process each concurrently. This results in a few major usability changes as outlined below:
