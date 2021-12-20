@@ -956,7 +956,7 @@ def write_bash_job_script(master,filename,extn,do,purpose,dir='jobScripts',echo=
     master.write('\n#Create {0}.sh file, make executable and symlink to current version\n'.format(filename))
     master.write('echo "#!/bin/bash" > {0}\n'.format(fname))
     master.write('{0}{1}>> {2}\n'.format(do,do2,fname))
-    master.write('chmod u+x {0}\n'.format(fname))
+    master.write('chmod +x {0}\n'.format(fname))
     master.write('ln -f -s {0} {1}.sh\n'.format(fname,filename))
     if echo:
         master.write('echo Run ./{0}.sh to {1}.\n'.format(filename,purpose))
