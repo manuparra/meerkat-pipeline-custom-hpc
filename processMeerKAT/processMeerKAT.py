@@ -270,7 +270,7 @@ def validate_args(args,config,parser=None):
             raise_error(config, msg, parser)
 
         if args['MS'] not in [None,'None'] and not os.path.isdir(args['MS']):
-            msg = "Input MS '{0}' not found.".format(args['MS'])
+            msg = "HOLAInput MS '{0}' not found.".format(args['MS'])
             raise_error(config, msg, parser)
 
     if parser is not None and not args['build'] and args['MS']:

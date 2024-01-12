@@ -1,0 +1,53 @@
+[data]
+vis = '/mnt/software/containers/slurm/Jesushcg97/hcg97_av16sch4.ms'
+
+[fields]
+bpassfield = ''
+fluxfield = ''
+phasecalfield = ''
+targetfields = ''
+extrafields = ''
+
+[slurm]
+nodes = 1
+ntasks_per_node = 8
+plane = 1
+mem = 24
+partition = 'debug'
+exclude = ''
+time = '12:00:00'
+submit = True
+container = '/mnt/software/containers/casa-6.5.0-modular.sif'
+mpi_wrapper = 'mpirun'
+name = ''
+dependencies = ''
+account = 'ubuntu'
+reservation = ''
+modules = ['openmpi/2.1.1']
+verbose = True
+precal_scripts = [('calc_refant.py', False, ''), ('partition.py', True, '')]
+postcal_scripts = [('concat.py', False, ''), ('plotcal_spw.py', False, '')]
+scripts = [('validate_input.py', False, ''), ('flag_round_1.py', True, ''), ('calc_refant.py', False, ''), ('setjy.py', True, ''), ('xx_yy_solve.py', False, ''), ('xx_yy_apply.py', True, ''), ('flag_round_2.py', True, ''), ('xy_yx_solve.py', False, ''), ('xy_yx_apply.py', True, ''), ('split.py', True, ''), ('quick_tclean.py', True, '')]
+
+[crosscal]
+minbaselines = 4                  # Minimum number of baselines to use while calibrating
+chanbin = 1                       # Number of channels to average before calibration (during partition)
+width = 1                         # Number of channels to (further) average after calibration (during split)
+timeavg = '8s'                    # Time interval to average after calibration (during split)
+createmms = True                  # Create MMS (True) or MS (False) for cross-calibration during partition
+keepmms = True                    # Output MMS (True) or MS (False) during split
+spw = '*:880~933MHz,*:960~1010MHz,*:1010~1060MHz,*:1060~1110MHz,*:1110~1163MHz,*:1299~1350MHz,*:1350~1400MHz,*:1400~1450MHz,*:1450~1500MHz,*:1500~1524MHz,*:1630~1680MHz' # Spectral window / frequencies to extract for MMS
+nspw = 11                         # Number of spectral windows to split into
+calcrefant = False                # Calculate reference antenna in program (overwrites 'refant')
+refant = 'm059'                   # Reference antenna name / number
+standard = 'Stevens-Reynolds 2016'# Flux density standard for setjy
+badants = []                      # List of bad antenna numbers (to flag)
+badfreqranges = [ '933~960MHz',   # List of bad frequency ranges (to flag)
+	'1163~1299MHz',
+	'1524~1630MHz']
+
+[run]
+continue = True
+dopol = True
+hpc = 'ilifu'
+
