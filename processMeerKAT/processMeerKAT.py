@@ -642,9 +642,8 @@ def write_spw_master(filename,config,args,SPWs,precal_scripts,postcal_scripts,su
     for i,spw in enumerate(SPWs.split(',')):
         master.write('echo Running pipeline in directory "{0}" for spectral window 0:{0}\n'.format(spw))
         master.write('cd {0}\n'.format(spw))
-        logger.info(f"Writting pipeline to run in {spw} using config {config}")
-        #master.write('output=$({0} --config ./{config} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
-        master.write('output=$({0} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
+        logger.info(f"Writting pipeline to run in {spw} using config {config}")        
+        master.write('output=$(./{0} --run --submit --justrun {argument_calls}'.format(os.path.split(THIS_PROG)[1], config=config, argument_calls=argument_calls))
         if partition:
             master.write(' --dependencies=$partitionID\_{0}'.format(i))
         elif len(precal_scripts) > 0:
