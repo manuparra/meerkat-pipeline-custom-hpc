@@ -4,7 +4,7 @@
 
 # The IDIA MeerKAT Pipeline
 
-The IDIA MeerKAT pipeline is a radio interferometric calibration pipeline designed to process MeerKAT data. **It is under heavy development, and so far only implements the cross-calibration steps, and quick-look images. Please report any issues you find in the [GitHub issues](https://github.com/idia-astro/pipelines/issues).**
+The IDIA MeerKAT pipeline is a radio interferometric calibration pipeline designed to process MeerKAT data. 
 
 ## Requirements
 
@@ -20,7 +20,7 @@ which will add the correct paths to your `$PATH` and `$PYTHONPATH` in order to c
 
 ### 2. Build a config file:
 
-        processMeerKAT.py -B -C myconfig.txt -M mydata.ms
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms
 
 This defines several variables that are read by the pipeline while calibrating the data, as well as requesting resources on the cluster. The config file parameters are described by in-line comments in the config file itself wherever possible.
 
@@ -39,6 +39,11 @@ c. Including self-calibration :
 d. Including science imaging :
 
     processMeerKAT.py -B -C myconfig.txt -M mydata.ms -I
+
+Example with Line Processing self-calibration and science imaging:
+   
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms -I -2
+
 
 
 ### 3. To run the pipeline:
