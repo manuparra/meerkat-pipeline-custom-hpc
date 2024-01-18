@@ -12,8 +12,6 @@ This pipeline is designed to run on the Ilifu cluster, making use of SLURM and M
 
 ## Quick Start
 
-**Note: It is not necessary to copy the raw data (i.e. the MS) to your working directory. The first step of the pipeline does this for you by creating an MMS or MS, and does not attempt to manipulate the raw data (e.g. stored in `/idia/projects` - see [data format](https://idia-pipelines.github.io/docs/processMeerKAT/Example-Use-Cases/#data-format)).**
-
 ### 1. In order to use the `processMeerKAT.py` script, source the `setup.sh` file:
 
         source /idia/software/pipelines/master/setup.sh
@@ -24,8 +22,24 @@ which will add the correct paths to your `$PATH` and `$PYTHONPATH` in order to c
 
         processMeerKAT.py -B -C myconfig.txt -M mydata.ms
 
-
 This defines several variables that are read by the pipeline while calibrating the data, as well as requesting resources on the cluster. The config file parameters are described by in-line comments in the config file itself wherever possible.
+
+a. For continuum/spectral line processing :
+
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms
+
+b. For polarization processing :
+
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms -P
+
+c. Including self-calibration :
+
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms -2
+
+d. Including science imaging :
+
+    processMeerKAT.py -B -C myconfig.txt -M mydata.ms -I
+
 
 ### 3. To run the pipeline:
 
